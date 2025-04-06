@@ -1,0 +1,5 @@
+.env
+node_modules/
+downloads/ 
+auth.json
+uploaded_images.txt
