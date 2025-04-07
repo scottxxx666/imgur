@@ -1,5 +1,4 @@
 const { chromium } = require('@playwright/test');
-const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -15,31 +14,8 @@ if (!WEVERSE_EMAIL || !WEVERSE_PASSWORD) {
   process.exit(1);
 }
 
-async function downloadImage(url, filename) {
-  try {
-    const response = await axios({
-      url,
-      method: 'GET',
-      responseType: 'stream',
-      timeout: 10000,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Referer': 'https://weverse.io/'
-      }
-    });
-
-    const writer = fs.createWriteStream(filename);
-    response.data.pipe(writer);
-
-    return new Promise((resolve, reject) => {
-      writer.on('finish', resolve);
-      writer.on('error', reject);
-    });
-  } catch (error) {
-    console.error(`Error downloading image: ${error.message}`);
-    throw error;
-  }
-}
+const { downloadFile } = require('./utils');
+const { DOWNLOADS_DIR } = require('./config');
 
 async function getImagesFromWeverse(postUrl) {
   let browser;
@@ -99,7 +75,6 @@ async function getImagesFromWeverse(postUrl) {
       console.log('Already logged in, proceeding with image download...');
     }
     
-
     const bodyDom = 'div[class*="DescriptionView_container"]';
     // const bodyDom = 'div[class^="PostModalView_content"]';
 
@@ -164,20 +139,19 @@ async function getImagesFromWeverse(postUrl) {
       return;
     }
 
-    // Create downloads directory if it doesn't exist
-    const downloadDir = path.join(__dirname, 'downloads');
-    if (!fs.existsSync(downloadDir)) {
-      fs.mkdirSync(downloadDir);
-    }
 
     // Download each image
     console.log(`Found ${imageUrls.length} images`);
     for (let [index, imageUrl] of imageUrls.entries()) {
       const extension = path.extname(imageUrl) || '.jpg';
-      const filename = path.join(downloadDir, `weverse_image_${index + 1}${extension}`);
+      const filename = path.join(DOWNLOADS_DIR, `weverse_image_${index + 1}${extension}`);
       
       console.log(`Downloading image ${index + 1}/${imageUrls.length}...`);
-      await downloadImage(imageUrl, filename);
+      await downloadFile(imageUrl, filename, {
+        headers: {
+          'Referer': 'https://weverse.io/'
+        }
+      });
       console.log(`✓ Image ${index + 1} saved as ${filename}`);
     }
 
@@ -199,7 +173,6 @@ async function getImagesFromWeverse(postUrl) {
 }
 
 // Check if URL is provided as command line argument
-// const postUrl = process.argv[2];
 const postUrl = 'https://weverse.io/lesserafim/media/1-157643286';
 
 if (!postUrl) {

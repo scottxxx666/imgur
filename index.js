@@ -20,7 +20,7 @@ async function uploadToImgur(filePath) {
     const response = await axios.post(endpoint, formData, {
       headers: {
         ...formData.getHeaders(),
-        'Authorization': `Client-ID ${clientId}`
+        'Authorization': `Client-ID ${process.env.IMGUR_CLIENT_ID}`
       }
     });
 

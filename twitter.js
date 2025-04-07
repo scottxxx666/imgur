@@ -1,27 +1,8 @@
 const { chromium } = require('@playwright/test');
-const axios = require('axios');
-const fs = require('fs');
 const path = require('path');
-
-async function downloadImage(url, filename) {
-  const response = await axios({
-    url,
-    method: 'GET',
-    responseType: 'stream',
-    timeout: 10000, // 10 second timeout
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    }
-  });
-
-  const writer = fs.createWriteStream(filename);
-  response.data.pipe(writer);
-
-  return new Promise((resolve, reject) => {
-    writer.on('finish', resolve);
-    writer.on('error', reject);
-  });
-}
+const fs = require('fs');
+const { downloadFile } = require('./utils');
+const { DOWNLOADS_DIR } = require('./config');
 
 async function getImagesFromTweet(tweetUrl) {
   let browser;
@@ -56,21 +37,16 @@ async function getImagesFromTweet(tweetUrl) {
       console.log('No images found in the tweet.');
       return;
     }
-
-    // Create downloads directory if it doesn't exist
-    const downloadDir = path.join(__dirname, 'downloads');
-    if (!fs.existsSync(downloadDir)) {
-      fs.mkdirSync(downloadDir);
-    }
+    
 
     // Download each image
     console.log(`Found ${imageUrls.length} images`);
     for (let [index, imageUrl] of imageUrls.entries()) {
       const extension = '.jpg';  // Twitter images are typically JPG
-      const filename = path.join(downloadDir, `image_${index}${extension}`);
+      const filename = path.join(DOWNLOADS_DIR, `image_${index}${extension}`);
       
       console.log(`Downloading image ${index + 1}/${imageUrls.length}...`);
-      await downloadImage(imageUrl, filename);
+      await downloadFile(imageUrl, filename);
       console.log(`✓ Image ${index + 1} saved as ${filename}`);
     }
 

@@ -1,5 +1,4 @@
 .env
-node_modules/
-downloads/ 
+node_modules/ 
 auth.json
 uploaded_images.txt
