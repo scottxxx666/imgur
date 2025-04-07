@@ -4,7 +4,7 @@ const fs = require('fs');
 const { downloadFile } = require('./utils');
 const { DOWNLOADS_DIR } = require('./config');
 
-async function getImagesFromTweet(tweetUrl) {
+async function downloadFromTwitter(tweetUrl) {
   let browser;
   try {
     // Launch browser with options
@@ -54,6 +54,7 @@ async function getImagesFromTweet(tweetUrl) {
 
   } catch (error) {
     console.error('Error:', error.message);
+    throw error;
   } finally {
     if (browser) {
       await browser.close();
@@ -61,12 +62,6 @@ async function getImagesFromTweet(tweetUrl) {
   }
 }
 
-// Check if URL is provided as command line argument
-const tweetUrl = process.argv[2] || 'https://x.com/M2MPD/status/1906606271513366532';
-
-if (!tweetUrl.includes('twitter.com') && !tweetUrl.includes('x.com')) {
-  console.error('Please provide a valid Twitter/X URL');
-  process.exit(1);
-}
-
-getImagesFromTweet(tweetUrl); 
+module.exports = {
+  downloadFromTwitter
+};

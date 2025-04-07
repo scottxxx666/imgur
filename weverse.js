@@ -1,7 +1,8 @@
 const { chromium } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config();
+const { downloadFile } = require('./utils');
+const { DOWNLOADS_DIR } = require('./config');
 
 // Get credentials from .env file
 const WEVERSE_EMAIL = process.env.WEVERSE_EMAIL;
@@ -14,10 +15,9 @@ if (!WEVERSE_EMAIL || !WEVERSE_PASSWORD) {
   process.exit(1);
 }
 
-const { downloadFile } = require('./utils');
-const { DOWNLOADS_DIR } = require('./config');
 
-async function getImagesFromWeverse(postUrl) {
+
+async function downloadFromWeverse(postUrl) {
   let browser;
   let context;
   try {
@@ -162,6 +162,7 @@ async function getImagesFromWeverse(postUrl) {
 
   } catch (error) {
     console.error('Error:', error.message);
+    throw error;
   } finally {
     if (context) {
       await context.close();
@@ -172,17 +173,6 @@ async function getImagesFromWeverse(postUrl) {
   }
 }
 
-// Check if URL is provided as command line argument
-const postUrl = 'https://weverse.io/lesserafim/media/1-157643286';
-
-if (!postUrl) {
-  console.error('Please provide a Weverse post URL');
-  process.exit(1);
-}
-
-if (!postUrl.includes('weverse.io')) {
-  console.error('Please provide a valid Weverse URL');
-  process.exit(1);
-}
-
-getImagesFromWeverse(postUrl); 
+module.exports = {
+  downloadFromWeverse
+};
