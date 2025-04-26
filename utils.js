@@ -1,5 +1,6 @@
 const axios = require('axios');
 const fs = require('fs');
+const { DOWNLOADS_DIR } = require('./config');
 
 /**
  * Downloads a file from a URL and saves it to the specified filename
@@ -36,6 +37,17 @@ async function downloadFile(url, filename, options = {}) {
   }
 }
 
+async function isFolderEmpty() {
+  try {
+    const files = await fs.promises.readdir(DOWNLOADS_DIR);
+    return files.filter(f => !f.startsWith('.')).length === 0;
+  } catch (error) {
+    console.error('Error reading directory:', error);
+    throw error;
+  }
+}
+
 module.exports = {
-  downloadFile
+  downloadFile,
+  isFolderEmpty,
 }; 

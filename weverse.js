@@ -4,6 +4,9 @@ const path = require('path');
 const { downloadFile } = require('./utils');
 const { DOWNLOADS_DIR } = require('./config');
 
+async function downloadFromWeverse(postUrl) {
+
+
 // Get credentials from .env file
 const WEVERSE_EMAIL = process.env.WEVERSE_EMAIL;
 const WEVERSE_PASSWORD = process.env.WEVERSE_PASSWORD;
@@ -12,12 +15,9 @@ const WEVERSE_PASSWORD = process.env.WEVERSE_PASSWORD;
 if (!WEVERSE_EMAIL || !WEVERSE_PASSWORD) {
   console.error('Error: Missing credentials in .env file');
   console.error('Please create a .env file with WEVERSE_EMAIL and WEVERSE_PASSWORD');
-  process.exit(1);
+  return;
 }
-
-
-
-async function downloadFromWeverse(postUrl) {
+  
   let browser;
   let context;
   try {
