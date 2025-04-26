@@ -35,15 +35,15 @@ async function uploadToImgur(filePath) {
   }
 }
 
-async function addImageToAlbum(imageDeleteHash, albumDeleteHash) {
-  if (!imageDeleteHash || !albumDeleteHash) {
+async function addImagesToAlbum(imageDeleteHashes, albumDeleteHash) {
+  if (!imageDeleteHashes || !albumDeleteHash) {
     console.error('Image or album delete hash not provided');
     return;
   }
   try {
     const response = await axios.post(
       `https://api.imgur.com/3/album/${albumDeleteHash}/add`,
-      { deletehashes: [imageDeleteHash] },
+      { deletehashes: imageDeleteHashes },
       {
         headers: {
           'Authorization': `Client-ID ${process.env.IMGUR_CLIENT_ID}`
@@ -59,6 +59,8 @@ async function addImageToAlbum(imageDeleteHash, albumDeleteHash) {
 
 async function uploadAllImages(albumDeleteHash) {
   const imagesDir = 'downloads';
+  const imageDeleteHashes = [];
+  
   try {
     const files = await fs.promises.readdir(imagesDir);
     const imageFiles = files.filter(file => /\.(jpg|jpeg|png|gif|mp4)$/i.test(file));
@@ -77,7 +79,7 @@ async function uploadAllImages(albumDeleteHash) {
         const uploadResult = await uploadToImgur(imagePath);
         output += `${uploadResult.link}\n`;
         
-        await addImageToAlbum(uploadResult.deletehash, albumDeleteHash);
+        imageDeleteHashes.push(uploadResult.deletehash);
 
         // Delete the file after successful upload
         await fs.promises.unlink(imagePath);
@@ -88,6 +90,14 @@ async function uploadAllImages(albumDeleteHash) {
         console.error(`Error processing ${file}:`, error.message);
         processed++;
       }
+    }
+
+    try {
+      await addImagesToAlbum(imageDeleteHashes, albumDeleteHash);
+    } catch (error) {
+      console.log(imageDeleteHashes);
+      console.error('Error adding images to album:', error.message);
+      throw error;
     }
 
     if (processed === imageFiles.length) {
@@ -128,5 +138,5 @@ module.exports = {
   uploadToImgur,
   uploadAllImages,
   createUnauthAlbum,
-  addImageToAlbum
+  addImagesToAlbum
 }; 
