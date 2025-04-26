@@ -24,27 +24,61 @@ async function uploadToImgur(filePath) {
       }
     });
 
-    return response.data.data.link;
+    return {
+      link: response.data.data.link,
+      deletehash: response.data.data.deletehash,
+      id: response.data.data.id
+    };
   } catch (error) {
     console.error('Error uploading file:', error.message);
     throw error;
   }
 }
 
-async function uploadAllImages() {
+async function addImageToAlbum(imageDeleteHash, albumDeleteHash) {
+  if (!imageDeleteHash || !albumDeleteHash) {
+    console.error('Image or album delete hash not provided');
+    return;
+  }
+  try {
+    const response = await axios.post(
+      `https://api.imgur.com/3/album/${albumDeleteHash}/add`,
+      { deletehashes: [imageDeleteHash] },
+      {
+        headers: {
+          'Authorization': `Client-ID ${process.env.IMGUR_CLIENT_ID}`
+        }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error adding image to album:', error.message);
+    throw error;
+  }
+}
+
+async function uploadAllImages(albumDeleteHash) {
   const imagesDir = 'downloads';
   try {
     const files = await fs.promises.readdir(imagesDir);
     const imageFiles = files.filter(file => /\.(jpg|jpeg|png|gif|mp4)$/i.test(file));
+    
+    if (imageFiles.length === 0) {
+      console.log('No images found to upload');
+      return;
+    }
+    
     let output = '';
     let processed = 0;
 
     for (const file of imageFiles) {
       try {
         const imagePath = path.join(imagesDir, file);
-        const url = await uploadToImgur(imagePath);
-        output += `${url}\n`;
+        const uploadResult = await uploadToImgur(imagePath);
+        output += `${uploadResult.link}\n`;
         
+        await addImageToAlbum(uploadResult.deletehash, albumDeleteHash);
+
         // Delete the file after successful upload
         await fs.promises.unlink(imagePath);
         console.log(`Deleted ${file} after successful upload`);
@@ -65,7 +99,34 @@ async function uploadAllImages() {
   }
 }
 
+async function createUnauthAlbum(title, description = '') {
+  try {
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('description', description);
+    formData.append('privacy', 'public');
+
+    const response = await axios.post('https://api.imgur.com/3/album', formData, {
+      headers: {
+        ...formData.getHeaders(),
+        'Authorization': `Client-ID ${process.env.IMGUR_CLIENT_ID}`
+      }
+    });
+
+    return {
+      id: response.data.data.id,
+      deletehash: response.data.data.deletehash,
+      link: `https://imgur.com/a/${response.data.data.id}`
+    };
+  } catch (error) {
+    console.error('Error creating album:', error.message);
+    throw error;
+  }
+}
+
 module.exports = {
   uploadToImgur,
-  uploadAllImages
+  uploadAllImages,
+  createUnauthAlbum,
+  addImageToAlbum
 }; 
