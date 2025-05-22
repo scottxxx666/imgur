@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const FormData = require('form-data');
+const { convertHeicToJpg } = require('./utils');
+const { DOWNLOADS_DIR } = require('./config');
 
 async function uploadToImgur(filePath) {
   try {
@@ -58,15 +60,34 @@ async function addImagesToAlbum(imageDeleteHashes, albumDeleteHash) {
 }
 
 async function uploadAllImages(albumDeleteHash) {
-  const imagesDir = 'downloads';
+  const imagesDir = DOWNLOADS_DIR;
   const imageDeleteHashes = [];
   
   try {
-    const files = await fs.promises.readdir(imagesDir);
-    const imageFiles = files.filter(file => /\.(jpg|jpeg|png|gif|mp4)$/i.test(file));
+    let filesInDir = await fs.promises.readdir(imagesDir);
+
+    for (let i = 0; i < filesInDir.length; i++) {
+      const fileName = filesInDir[i];
+      const filePath = path.join(imagesDir, fileName);
+
+      if (path.extname(fileName).toLowerCase() === '.heic') {
+        console.log(`Found HEIC file: ${fileName}. Converting to JPG...`);
+        try {
+          const jpgFilePath = await convertHeicToJpg(filePath);
+          console.log(`Converted ${fileName} to ${path.basename(jpgFilePath)}`);
+          filesInDir[i] = path.basename(jpgFilePath); // Update with new JPG filename
+        } catch (conversionError) {
+          console.error(`Failed to convert ${fileName}: ${conversionError.message}`);
+          filesInDir.splice(i, 1); // Remove problematic HEIC file
+          i--; // Adjust index after splice
+        }
+      }
+    }
+
+    const imageFiles = filesInDir.filter(file => /\.(jpg|jpeg|png|gif|mp4)$/i.test(file));
     
     if (imageFiles.length === 0) {
-      console.log('No images found to upload');
+      console.log('No images or convertible HEIC files found to upload');
       return;
     }
     
@@ -105,7 +126,7 @@ async function uploadAllImages(albumDeleteHash) {
       console.log('All images uploaded, deleted, and URLs saved to uploaded_images.txt');
     }
   } catch (error) {
-    console.error('Error reading directory:', error);
+    console.error('Error in uploadAllImages:', error);
   }
 }
 

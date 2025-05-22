@@ -1,5 +1,8 @@
 const axios = require('axios');
 const fs = require('fs');
+const fsPromises = require('fs').promises; // Ensure this is used or fs.promises directly
+const path = require('path');
+const heicConvert = require('heic-convert');
 const { DOWNLOADS_DIR } = require('./config');
 
 /**
@@ -39,7 +42,7 @@ async function downloadFile(url, filename, options = {}) {
 
 async function isFolderEmpty() {
   try {
-    const files = await fs.promises.readdir(DOWNLOADS_DIR);
+    const files = await fsPromises.readdir(DOWNLOADS_DIR); // Corrected to use fsPromises
     return files.filter(f => !f.startsWith('.')).length === 0;
   } catch (error) {
     console.error('Error reading directory:', error);
@@ -47,7 +50,35 @@ async function isFolderEmpty() {
   }
 }
 
+/**
+ * Converts an HEIC file to JPG format.
+ * @param {string} heicFilePath - The path to the HEIC file.
+ * @returns {Promise<string>} The path to the newly created JPG file.
+ */
+async function convertHeicToJpg(heicFilePath) {
+  try {
+    const inputBuffer = await fsPromises.readFile(heicFilePath); // fsPromises already defined
+    const outputBuffer = await heicConvert({
+      buffer: inputBuffer,
+      format: 'JPEG',
+      quality: 0.9,
+    });
+
+    const parsedPath = path.parse(heicFilePath);
+    const jpgFilePath = path.join(parsedPath.dir, `${parsedPath.name}.jpg`);
+
+    await fsPromises.writeFile(jpgFilePath, outputBuffer);
+    await fsPromises.unlink(heicFilePath);
+
+    return jpgFilePath;
+  } catch (error) {
+    console.error(`Failed to convert HEIC to JPG: ${error.message}`);
+    throw error;
+  }
+}
+
 module.exports = {
   downloadFile,
   isFolderEmpty,
-}; 
+  convertHeicToJpg,
+};
